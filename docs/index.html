@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mess Admin</title>
+<style>
+  :root{
+    --bg:#f4f6fb; --card:#fff; --ink:#1f2430; --muted:#6b7280; --line:#e5e8f0;
+    --brand:#2563eb; --brand-d:#1d4ed8; --ok:#059669; --danger:#dc2626; --warn:#b45309;
+    --radius:14px; --shadow:0 1px 3px rgba(20,30,60,.08),0 8px 24px rgba(20,30,60,.06);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+       background:var(--bg);color:var(--ink);font-size:15px;line-height:1.45}
+  h1,h2,h3{margin:0}
+  button{font:inherit;cursor:pointer;border:0;border-radius:10px;padding:10px 16px;background:var(--brand);color:#fff;font-weight:600}
+  button:hover{background:var(--brand-d)}
+  button.ghost{background:#eef1f8;color:var(--ink)}
+  button.ghost:hover{background:#e2e7f3}
+  button.danger{background:#fdecec;color:var(--danger)}
+  button.danger:hover{background:#fbdada}
+  button.sm{padding:6px 10px;font-size:13px;border-radius:8px}
+  input,select{font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);width:100%}
+  label{display:block;font-size:12.5px;font-weight:600;color:var(--muted);margin:0 0 5px 2px;text-transform:uppercase;letter-spacing:.03em}
+  .field{margin-bottom:12px}
+  .card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px}
+  .row{display:flex;gap:12px;flex-wrap:wrap}
+  .row>.field{flex:1;min-width:140px}
+  .muted{color:var(--muted)}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{padding:9px 10px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);position:sticky;top:0;background:#fafbff}
+  .tbl-wrap{overflow-x:auto;max-height:60vh;overflow-y:auto;border-radius:10px;border:1px solid var(--line)}
+  .num{text-align:right;font-variant-numeric:tabular-nums}
+  .pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:600}
+  .pill.b{background:#fef3c7;color:#92400e}.pill.l{background:#dbeafe;color:#1e40af}.pill.d{background:#e9d5ff;color:#6b21a8}
+  .yy{color:var(--ok);font-weight:700}.nn{color:#cbd0da}
+  /* layout */
+  header.top{background:#111827;color:#fff;padding:14px 18px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:20}
+  header.top .logo{font-size:20px}
+  header.top h1{font-size:17px;font-weight:700}
+  header.top .sp{flex:1}
+  nav.tabs{display:flex;gap:6px;padding:10px 12px;background:#fff;border-bottom:1px solid var(--line);
+           position:sticky;top:52px;z-index:15;overflow-x:auto}
+  nav.tabs button{background:transparent;color:var(--muted);padding:8px 14px;border-radius:999px;font-weight:600}
+  nav.tabs button.active{background:var(--brand);color:#fff}
+  main{max-width:940px;margin:0 auto;padding:18px 14px 60px}
+  .page{display:none}.page.active{display:block}
+  .stack>*+*{margin-top:16px}
+  .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#111827;color:#fff;
+         padding:11px 18px;border-radius:10px;box-shadow:var(--shadow);opacity:0;transition:.25s;z-index:50;max-width:90vw}
+  .toast.show{opacity:1}
+  .toast.err{background:var(--danger)}
+  /* login */
+  #login{position:fixed;inset:0;background:linear-gradient(160deg,#1e293b,#0f172a);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px}
+  #login .box{background:#fff;border-radius:18px;padding:30px;width:340px;max-width:100%;box-shadow:var(--shadow);text-align:center}
+  #login .logo{font-size:44px}
+  #login h2{margin:8px 0 4px}
+  .hint{font-size:12.5px;color:var(--muted);margin-top:10px}
+  .suggest{position:relative}
+  .suggest .list{position:absolute;z-index:30;left:0;right:0;top:100%;background:#fff;border:1px solid var(--line);
+                 border-radius:10px;box-shadow:var(--shadow);max-height:210px;overflow:auto;display:none}
+  .suggest .list.show{display:block}
+  .suggest .list div{padding:9px 12px;cursor:pointer;font-size:14px}
+  .suggest .list div:hover{background:#eef1f8}
+  .sectionttl{font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:4px 2px}
+  .spin{display:inline-block;width:16px;height:16px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:sp .7s linear infinite;vertical-align:-3px}
+  @keyframes sp{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<!-- ============ LOGIN ============ -->
+<div id="login">
+  <div class="box">
+    <div class="logo">🍽️</div>
+    <h2>Mess Admin</h2>
+    <p class="muted" style="margin:2px 0 18px">Enter passcode to continue</p>
+    <div class="field"><input id="pin" type="password" placeholder="Passcode" autocomplete="off"></div>
+    <button id="loginBtn" style="width:100%">Unlock</button>
+    <p class="hint" id="loginHint"></p>
+  </div>
+</div>
+
+<!-- ============ APP ============ -->
+<header class="top">
+  <span class="logo">🍽️</span>
+  <h1>Mess Admin</h1>
+  <span class="sp"></span>
+  <button class="ghost sm" id="logoutBtn">Lock</button>
+</header>
+
+<nav class="tabs">
+  <button data-tab="today" class="active">Today</button>
+  <button data-tab="members">Members</button>
+  <button data-tab="report">Report</button>
+  <button data-tab="prices">Prices</button>
+</nav>
+
+<main>
+  <!-- ===== TODAY / EXCEPTIONS ===== -->
+  <section class="page active stack" id="page-today">
+    <div class="card">
+      <h3 style="margin-bottom:12px">Record an exception</h3>
+      <p class="muted" style="margin:-6px 0 14px;font-size:13px">
+        Only log changes to the default. <b>Skip</b> = didn't eat. <b>Add</b> = extra meal. <b>Meal = ALL + Skip</b> = full day off (leave).</p>
+      <div class="row">
+        <div class="field"><label>Date</label><input type="date" id="exDate"></div>
+        <div class="field"><label>Member</label>
+          <select id="exMember"></select>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Meal</label>
+          <select id="exMeal"><option>Breakfast</option><option>Lunch</option><option>Dinner</option><option value="ALL">ALL (whole day)</option></select>
+        </div>
+        <div class="field"><label>Action</label>
+          <select id="exAction"><option>Skip</option><option>Add</option></select>
+        </div>
+        <div class="field" style="flex:2"><label>Note (optional)</label><input id="exNote" placeholder="reason…"></div>
+      </div>
+      <button id="exSave">Add exception</button>
+    </div>
+
+    <div class="card">
+      <div class="sectionttl">Recent exceptions</div>
+      <div class="tbl-wrap">
+        <table><thead><tr><th>Date</th><th>Member</th><th>Meal</th><th>Action</th><th>Note</th><th></th></tr></thead>
+          <tbody id="exList"></tbody></table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== MEMBERS ===== -->
+  <section class="page stack" id="page-members">
+    <div class="card">
+      <h3 id="mFormTitle" style="margin-bottom:12px">Add member</h3>
+      <input type="hidden" id="mId">
+      <div class="field suggest">
+        <label>Name (type to search UAQ roster)</label>
+        <input id="mName" placeholder="Name" autocomplete="off">
+        <div class="list" id="mSuggest"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Employee ID</label><input id="mEmpId" placeholder="from roster"></div>
+        <div class="field"><label>Category</label>
+          <select id="mCat"><option>Regular</option><option>Driver</option><option>Half</option></select>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Breakfast</label><select id="mB"><option value="Y">Yes</option><option value="">No</option></select></div>
+        <div class="field"><label>Lunch</label><select id="mL"><option value="Y">Yes</option><option value="">No</option></select></div>
+        <div class="field"><label>Dinner</label><select id="mD"><option value="Y">Yes</option><option value="">No</option></select></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Join date</label><input type="date" id="mJoin"></div>
+        <div class="field"><label>Leave date (blank = active)</label><input type="date" id="mLeave"></div>
+        <div class="field" style="flex:2"><label>Notes</label><input id="mNotes"></div>
+      </div>
+      <div class="row" style="justify-content:flex-end">
+        <button class="ghost" id="mReset" style="display:none">Cancel edit</button>
+        <button id="mSave">Add member</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="sectionttl">Members (<span id="mCount">0</span>) — <input id="mFilter" placeholder="filter…" style="width:180px;display:inline-block;padding:6px 10px"></div>
+      <div class="tbl-wrap">
+        <table><thead><tr><th>Name</th><th>Emp ID</th><th>Cat</th><th>B</th><th>L</th><th>D</th><th>Join</th><th>Leave</th><th></th></tr></thead>
+          <tbody id="mList"></tbody></table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== REPORT ===== -->
+  <section class="page stack" id="page-report">
+    <div class="card">
+      <h3 style="margin-bottom:12px">Generate report</h3>
+      <div class="row" style="align-items:flex-end">
+        <div class="field"><label>Month</label><input type="month" id="rMonth"></div>
+        <div class="field muted" style="flex:0 0 auto;padding-bottom:10px">or</div>
+        <div class="field"><label>Start</label><input type="date" id="rStart"></div>
+        <div class="field"><label>End</label><input type="date" id="rEnd"></div>
+        <div class="field" style="flex:0 0 auto"><button id="rRun">Run</button></div>
+      </div>
+    </div>
+    <div id="rOut"></div>
+  </section>
+
+  <!-- ===== PRICES ===== -->
+  <section class="page stack" id="page-prices">
+    <div class="card">
+      <h3 style="margin-bottom:12px">Meal prices</h3>
+      <div class="row">
+        <div class="field"><label>Breakfast</label><input type="number" step="0.01" id="pB"></div>
+        <div class="field"><label>Lunch</label><input type="number" step="0.01" id="pL"></div>
+        <div class="field"><label>Dinner</label><input type="number" step="0.01" id="pD"></div>
+        <div class="field"><label>Currency</label><input id="pC" placeholder="AED"></div>
+      </div>
+      <button id="pSave">Save prices</button>
+    </div>
+  </section>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ======================================================================
+   CONFIG — fill these two after you deploy the Apps Script Web App
+   ====================================================================== */
+const API_URL = 'https://script.google.com/macros/s/AKfycbyky0myORA31HQ0tvtJpG-hna44Cz4eF332jFampqBfcQmGcdauKTYTn3HZBrcDW6OQ/exec';
+/* The passcode is whatever the supervisor types on the login screen.
+   It must match PASSCODE in the Apps Script (Mess.gs). Nothing to set here. */
+
+/* ======================================================================
+   State + helpers
+   ====================================================================== */
+let TOKEN = sessionStorage.getItem('mess_pin') || '';
+let DATA = { members: [], roster: [], settings: {}, exceptions: [] };
+
+function toast(msg, isErr){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast show'+(isErr?' err':'');
+  setTimeout(()=>t.className='toast',2600);
+}
+function today(){ return new Date().toISOString().slice(0,10); }
+
+async function api(action, payload){
+  const body = Object.assign({ action, token: TOKEN }, payload||{});
+  const res = await fetch(API_URL, {
+    method:'POST',
+    headers:{'Content-Type':'text/plain;charset=utf-8'}, // avoids CORS preflight
+    body: JSON.stringify(body)
+  });
+  const json = await res.json();
+  if(!json.ok){
+    if(json.error==='auth'){ logout(); throw new Error('Wrong passcode'); }
+    throw new Error(json.error||'Request failed');
+  }
+  return json;
+}
+
+/* ======================================================================
+   Login
+   ====================================================================== */
+const loginEl=document.getElementById('login');
+document.getElementById('loginBtn').onclick=doLogin;
+document.getElementById('pin').addEventListener('keydown',e=>{ if(e.key==='Enter') doLogin(); });
+
+async function doLogin(){
+  const pin=document.getElementById('pin').value.trim();
+  if(!pin) return;
+  if(API_URL.startsWith('PASTE')){ setHint('⚠ API_URL not set in index.html'); return; }
+  setHint('Checking… <span class="spin"></span>');
+  TOKEN=pin;
+  try{
+    const r=await api('bootstrap');
+    sessionStorage.setItem('mess_pin',pin);
+    DATA=r; onBoot(); loginEl.style.display='none';
+  }catch(err){ setHint('❌ '+err.message); TOKEN=''; }
+}
+function setHint(h){ document.getElementById('loginHint').innerHTML=h; }
+function logout(){
+  TOKEN=''; sessionStorage.removeItem('mess_pin');
+  loginEl.style.display='flex'; setHint(''); document.getElementById('pin').value='';
+}
+document.getElementById('logoutBtn').onclick=logout;
+
+/* ======================================================================
+   Tabs
+   ====================================================================== */
+document.querySelectorAll('nav.tabs button').forEach(b=>{
+  b.onclick=()=>{
+    document.querySelectorAll('nav.tabs button').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+    document.getElementById('page-'+b.dataset.tab).classList.add('active');
+  };
+});
+
+/* ======================================================================
+   Boot / render after login
+   ====================================================================== */
+function onBoot(){
+  document.getElementById('exDate').value=today();
+  document.getElementById('mJoin').value=today();
+  document.getElementById('rMonth').value=today().slice(0,7);
+  fillMemberSelect(); renderExceptions(); renderMembers(); fillPrices();
+}
+
+function fillMemberSelect(){
+  const sel=document.getElementById('exMember');
+  sel.innerHTML='';
+  DATA.members.slice().sort((a,b)=>a.name.localeCompare(b.name)).forEach(m=>{
+    const o=document.createElement('option'); o.value=m.name; o.textContent=m.name; sel.appendChild(o);
+  });
+}
+
+/* ---------- Exceptions ---------- */
+document.getElementById('exSave').onclick=async()=>{
+  const p={
+    date:document.getElementById('exDate').value,
+    member:document.getElementById('exMember').value,
+    meal:document.getElementById('exMeal').value,
+    exAction:document.getElementById('exAction').value,
+    note:document.getElementById('exNote').value
+  };
+  if(!p.date||!p.member){ toast('Pick date & member',true); return; }
+  try{ const r=await api('addException',p); DATA.exceptions=r.exceptions; renderExceptions();
+       document.getElementById('exNote').value=''; toast('Exception added ✓'); }
+  catch(e){ toast(e.message,true); }
+};
+function renderExceptions(){
+  const tb=document.getElementById('exList'); tb.innerHTML='';
+  (DATA.exceptions||[]).forEach(x=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${x.date}</td><td>${esc(x.member)}</td><td>${esc(x.meal)}</td>
+      <td>${x.action}</td><td class="muted">${esc(x.note||'')}</td>
+      <td><button class="danger sm" data-id="${x.id}">✕</button></td>`;
+    tr.querySelector('button').onclick=async()=>{
+      if(!confirm('Delete this exception?'))return;
+      try{ const r=await api('deleteException',{id:x.id}); DATA.exceptions=r.exceptions; renderExceptions(); toast('Deleted'); }
+      catch(e){ toast(e.message,true); }
+    };
+    tb.appendChild(tr);
+  });
+}
+
+/* ---------- Members ---------- */
+const mFilter=document.getElementById('mFilter');
+mFilter.oninput=renderMembers;
+function renderMembers(){
+  const q=(mFilter.value||'').toLowerCase();
+  const tb=document.getElementById('mList'); tb.innerHTML='';
+  const list=DATA.members.slice().sort((a,b)=>a.name.localeCompare(b.name))
+    .filter(m=>!q||m.name.toLowerCase().includes(q)||(m.empId||'').toLowerCase().includes(q));
+  document.getElementById('mCount').textContent=DATA.members.length;
+  list.forEach(m=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${esc(m.name)}</td><td class="muted">${esc(m.empId||'')}</td><td>${esc(m.category||'')}</td>
+      <td>${yn(m.b)}</td><td>${yn(m.l)}</td><td>${yn(m.d)}</td>
+      <td class="muted">${m.joinDate||''}</td><td class="muted">${m.leaveDate||''}</td>
+      <td style="white-space:nowrap">
+        <button class="ghost sm" data-e>Edit</button>
+        <button class="danger sm" data-d>✕</button></td>`;
+    tr.querySelector('[data-e]').onclick=()=>editMember(m);
+    tr.querySelector('[data-d]').onclick=async()=>{
+      if(!confirm('Remove '+m.name+'? (past reports stay accurate only if you set a Leave date instead)'))return;
+      try{ const r=await api('deleteMember',{id:m.id}); DATA.members=r.members; afterMembers(); toast('Removed'); }
+      catch(e){ toast(e.message,true); }
+    };
+    tb.appendChild(tr);
+  });
+}
+function editMember(m){
+  document.getElementById('mFormTitle').textContent='Edit member';
+  document.getElementById('mId').value=m.id;
+  document.getElementById('mName').value=m.name;
+  document.getElementById('mEmpId').value=m.empId||'';
+  document.getElementById('mCat').value=m.category||'Regular';
+  document.getElementById('mB').value=m.b?'Y':'';
+  document.getElementById('mL').value=m.l?'Y':'';
+  document.getElementById('mD').value=m.d?'Y':'';
+  document.getElementById('mJoin').value=m.joinDate||'';
+  document.getElementById('mLeave').value=m.leaveDate||'';
+  document.getElementById('mNotes').value=m.notes||'';
+  document.getElementById('mSave').textContent='Save changes';
+  document.getElementById('mReset').style.display='inline-block';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+document.getElementById('mReset').onclick=resetMemberForm;
+function resetMemberForm(){
+  ['mId','mName','mEmpId','mNotes','mLeave'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('mCat').value='Regular';
+  document.getElementById('mB').value='Y';document.getElementById('mL').value='Y';document.getElementById('mD').value='Y';
+  document.getElementById('mJoin').value=today();
+  document.getElementById('mFormTitle').textContent='Add member';
+  document.getElementById('mSave').textContent='Add member';
+  document.getElementById('mReset').style.display='none';
+}
+document.getElementById('mSave').onclick=async()=>{
+  const m={
+    id:document.getElementById('mId').value,
+    name:document.getElementById('mName').value.trim(),
+    empId:document.getElementById('mEmpId').value.trim(),
+    category:document.getElementById('mCat').value,
+    b:document.getElementById('mB').value==='Y',
+    l:document.getElementById('mL').value==='Y',
+    d:document.getElementById('mD').value==='Y',
+    joinDate:document.getElementById('mJoin').value,
+    leaveDate:document.getElementById('mLeave').value,
+    notes:document.getElementById('mNotes').value
+  };
+  if(!m.name){ toast('Name required',true); return; }
+  try{
+    const r=await api(m.id?'updateMember':'addMember',{member:m});
+    DATA.members=r.members; resetMemberForm(); afterMembers();
+    toast(m.id?'Member updated ✓':'Member added ✓');
+  }catch(e){ toast(e.message,true); }
+};
+function afterMembers(){ renderMembers(); fillMemberSelect(); }
+
+/* roster autocomplete on member name */
+const mName=document.getElementById('mName'), mSuggest=document.getElementById('mSuggest');
+mName.addEventListener('input',()=>{
+  const q=mName.value.trim().toLowerCase();
+  if(q.length<2){ mSuggest.className='list'; return; }
+  const hits=DATA.roster.filter(r=>r.name.toLowerCase().includes(q)).slice(0,8);
+  if(!hits.length){ mSuggest.className='list'; return; }
+  mSuggest.innerHTML=hits.map(h=>`<div data-id="${esc(h.empId)}" data-n="${esc(h.name)}">${esc(h.name)} <span class="muted">${esc(h.empId)}</span></div>`).join('');
+  mSuggest.className='list show';
+  mSuggest.querySelectorAll('div').forEach(d=>d.onclick=()=>{
+    mName.value=d.dataset.n; document.getElementById('mEmpId').value=d.dataset.id||''; mSuggest.className='list';
+  });
+});
+document.addEventListener('click',e=>{ if(!e.target.closest('.suggest')) mSuggest.className='list'; });
+
+/* ---------- Prices ---------- */
+function fillPrices(){
+  document.getElementById('pB').value=DATA.settings.breakfast??'';
+  document.getElementById('pL').value=DATA.settings.lunch??'';
+  document.getElementById('pD').value=DATA.settings.dinner??'';
+  document.getElementById('pC').value=DATA.settings.currency||'AED';
+}
+document.getElementById('pSave').onclick=async()=>{
+  const s={ breakfast:+document.getElementById('pB').value||0, lunch:+document.getElementById('pL').value||0,
+            dinner:+document.getElementById('pD').value||0, currency:document.getElementById('pC').value.trim()||'AED' };
+  try{ const r=await api('setSettings',{settings:s}); DATA.settings=r.settings; fillPrices(); toast('Prices saved ✓'); }
+  catch(e){ toast(e.message,true); }
+};
+
+/* ---------- Report ---------- */
+document.getElementById('rRun').onclick=async()=>{
+  let start=document.getElementById('rStart').value, end=document.getElementById('rEnd').value;
+  const mon=document.getElementById('rMonth').value;
+  if(mon && !(start&&end)){
+    const[y,mo]=mon.split('-').map(Number);
+    start=`${mon}-01`; end=new Date(y,mo,0).toISOString().slice(0,10);
+  }
+  if(!start||!end){ toast('Pick a month or a start+end',true); return; }
+  const out=document.getElementById('rOut');
+  out.innerHTML='<div class="card">Running… <span class="spin" style="border-color:#94a3b8;border-top-color:transparent"></span></div>';
+  try{
+    const r=await api('report',{start,end}); renderReport(r.report);
+  }catch(e){ out.innerHTML=''; toast(e.message,true); }
+};
+function renderReport(rep){
+  const cur=rep.prices.currency, out=document.getElementById('rOut');
+  const money=n=>n.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+  let bill=`<div class="card stack"><div class="row" style="justify-content:space-between;align-items:center">
+      <h3>Billing — ${rep.period.start} to ${rep.period.end}</h3>
+      <button class="ghost sm" id="csvBill">Download CSV</button></div>
+    <div class="tbl-wrap"><table><thead><tr><th>Name</th><th>Emp ID</th>
+      <th class="num">B</th><th class="num">L</th><th class="num">D</th><th class="num">Meals</th><th class="num">Amount (${cur})</th></tr></thead><tbody>`;
+  rep.perMember.forEach(p=>{
+    bill+=`<tr><td>${esc(p.name)}</td><td class="muted">${esc(p.empId||'')}</td>
+      <td class="num">${p.b}</td><td class="num">${p.l}</td><td class="num">${p.d}</td>
+      <td class="num">${p.meals}</td><td class="num">${money(p.amount)}</td></tr>`;
+  });
+  const t=rep.totals;
+  bill+=`</tbody><tfoot><tr style="font-weight:700;background:#fff8e1">
+    <td>TOTAL</td><td></td><td class="num">${t.b}</td><td class="num">${t.l}</td><td class="num">${t.d}</td>
+    <td class="num">${t.meals}</td><td class="num">${money(t.amount)}</td></tr></tfoot></table></div></div>`;
+
+  let daily=`<div class="card stack"><div class="row" style="justify-content:space-between;align-items:center">
+      <h3>Daily kitchen counts</h3><button class="ghost sm" id="csvDaily">Download CSV</button></div>
+    <div class="tbl-wrap"><table><thead><tr><th>Date</th>
+      <th class="num">Breakfast</th><th class="num">Lunch</th><th class="num">Dinner</th><th class="num">Total</th></tr></thead><tbody>`;
+  rep.daily.forEach(d=>{ daily+=`<tr><td>${d.date}</td><td class="num">${d.b}</td><td class="num">${d.l}</td><td class="num">${d.d}</td><td class="num">${d.total}</td></tr>`; });
+  daily+=`</tbody></table></div></div>`;
+
+  out.innerHTML=bill+daily;
+  document.getElementById('csvBill').onclick=()=>downloadCSV('billing_'+rep.period.start+'_'+rep.period.end+'.csv',
+    [['Name','EmpID','Breakfast','Lunch','Dinner','Meals','Amount']].concat(
+      rep.perMember.map(p=>[p.name,p.empId,p.b,p.l,p.d,p.meals,p.amount]))
+      .concat([['TOTAL','',t.b,t.l,t.d,t.meals,t.amount]]));
+  document.getElementById('csvDaily').onclick=()=>downloadCSV('daily_'+rep.period.start+'_'+rep.period.end+'.csv',
+    [['Date','Breakfast','Lunch','Dinner','Total']].concat(rep.daily.map(d=>[d.date,d.b,d.l,d.d,d.total])));
+}
+function downloadCSV(name,rows){
+  const csv=rows.map(r=>r.map(c=>{ c=String(c??''); return /[",\n]/.test(c)?'"'+c.replace(/"/g,'""')+'"':c; }).join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download=name; a.click();
+}
+
+/* ---------- utils ---------- */
+function esc(s){ return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function yn(v){ return v?'<span class="yy">Y</span>':'<span class="nn">·</span>'; }
+
+/* auto-login if passcode remembered this session */
+if(TOKEN){ document.getElementById('pin').value=TOKEN; doLogin(); }
+</script>
+</body>
+</html>

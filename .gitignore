@@ -1,0 +1,10 @@
+# Never publish the source spreadsheets (contain employee PII: names, IDs, OT, leave)
+*.xlsx
+*.xls
+
+# Backend lives in the Apps Script editor and embeds 220 employee names/IDs as
+# seed data — keep it OUT of the public repo. (Back it up in a PRIVATE repo if you want.)
+Mess.gs
+
+# Local tooling
+.claude/
