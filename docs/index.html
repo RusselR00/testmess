@@ -458,7 +458,15 @@ function renderRoster(){
         <button class="danger sm" data-d>✕</button></td>`;
       tr.querySelector('[data-e]').onclick=()=>editRoster(r);
       tr.querySelector('[data-d]').onclick=async()=>{
-        if(!confirm('Remove '+r.name+' from roster? (does not affect existing mess members)'))return;
+        const eid=(r.empId||'').trim().toLowerCase();
+        const linked=eid ? DATA.members.filter(m=>(m.empId||'').trim().toLowerCase()===eid) : [];
+        let msg='Remove '+r.name+' from roster? (does not affect existing mess members)';
+        if(linked.length){
+          msg='⚠ '+r.name+' (ID '+r.empId+') is linked to '+linked.length+' mess member'+(linked.length>1?'s':'')+':\n\n'
+              +linked.map(m=>'• '+m.name).join('\n')
+              +'\n\nDeleting from the roster will NOT remove the member, but you lose the search link to this ID. Continue?';
+        }
+        if(!confirm(msg))return;
         try{ const res=await api('deleteRoster',{id:r.id}); DATA.roster=res.roster; renderRoster(); toast('Removed'); }
         catch(e){ toast(e.message,true); }
       };
