@@ -94,6 +94,7 @@
 <nav class="tabs">
   <button data-tab="today" class="active">Today</button>
   <button data-tab="members">Members</button>
+  <button data-tab="roster">Roster</button>
   <button data-tab="report">Report</button>
   <button data-tab="prices">Prices</button>
 </nav>
@@ -169,6 +170,31 @@
       <div class="tbl-wrap">
         <table><thead><tr><th>Name</th><th>Emp ID</th><th>Cat</th><th>B</th><th>L</th><th>D</th><th>Join</th><th>Leave</th><th></th></tr></thead>
           <tbody id="mList"></tbody></table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== ROSTER ===== -->
+  <section class="page stack" id="page-roster">
+    <div class="card">
+      <h3 id="rmFormTitle" style="margin-bottom:12px">Add employee to roster</h3>
+      <p class="muted" style="margin:-6px 0 14px;font-size:13px">The roster is the full company employee list (from UAQ OT). It feeds the name search when you add a mess member.</p>
+      <input type="hidden" id="rmId">
+      <div class="row">
+        <div class="field"><label>Employee ID</label><input id="rmEmpId" placeholder="e.g. UAQ1234"></div>
+        <div class="field" style="flex:2"><label>Name</label><input id="rmName" placeholder="Full name"></div>
+      </div>
+      <div class="row" style="justify-content:flex-end">
+        <button class="ghost" id="rmReset" style="display:none">Cancel edit</button>
+        <button id="rmSave">Add to roster</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="sectionttl">Roster (<span id="rmCount">0</span>) — <input id="rmFilter" placeholder="filter by name or ID…" style="width:200px;display:inline-block;padding:6px 10px"></div>
+      <div class="tbl-wrap">
+        <table><thead><tr><th>Employee ID</th><th>Name</th><th></th></tr></thead>
+          <tbody id="rmList"></tbody></table>
       </div>
     </div>
   </section>
@@ -286,7 +312,7 @@ function onBoot(){
   document.getElementById('exDate').value=today();
   document.getElementById('mJoin').value=today();
   document.getElementById('rMonth').value=today().slice(0,7);
-  fillMemberSelect(); renderExceptions(); renderMembers(); fillPrices();
+  fillMemberSelect(); renderExceptions(); renderMembers(); renderRoster(); fillPrices();
 }
 
 function fillMemberSelect(){
@@ -415,6 +441,57 @@ mName.addEventListener('input',()=>{
   });
 });
 document.addEventListener('click',e=>{ if(!e.target.closest('.suggest')) mSuggest.className='list'; });
+
+/* ---------- Roster ---------- */
+const rmFilter=document.getElementById('rmFilter');
+rmFilter.oninput=renderRoster;
+function renderRoster(){
+  const q=(rmFilter.value||'').toLowerCase();
+  const tb=document.getElementById('rmList'); tb.innerHTML='';
+  document.getElementById('rmCount').textContent=DATA.roster.length;
+  DATA.roster.slice().sort((a,b)=>a.name.localeCompare(b.name))
+    .filter(r=>!q||r.name.toLowerCase().includes(q)||(r.empId||'').toLowerCase().includes(q))
+    .forEach(r=>{
+      const tr=document.createElement('tr');
+      tr.innerHTML=`<td class="muted">${esc(r.empId||'')}</td><td>${esc(r.name)}</td>
+        <td style="white-space:nowrap"><button class="ghost sm" data-e>Edit</button>
+        <button class="danger sm" data-d>✕</button></td>`;
+      tr.querySelector('[data-e]').onclick=()=>editRoster(r);
+      tr.querySelector('[data-d]').onclick=async()=>{
+        if(!confirm('Remove '+r.name+' from roster? (does not affect existing mess members)'))return;
+        try{ const res=await api('deleteRoster',{id:r.id}); DATA.roster=res.roster; renderRoster(); toast('Removed'); }
+        catch(e){ toast(e.message,true); }
+      };
+      tb.appendChild(tr);
+    });
+}
+function editRoster(r){
+  document.getElementById('rmFormTitle').textContent='Edit roster entry';
+  document.getElementById('rmId').value=r.id;
+  document.getElementById('rmEmpId').value=r.empId||'';
+  document.getElementById('rmName').value=r.name;
+  document.getElementById('rmSave').textContent='Save changes';
+  document.getElementById('rmReset').style.display='inline-block';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+document.getElementById('rmReset').onclick=resetRosterForm;
+function resetRosterForm(){
+  ['rmId','rmEmpId','rmName'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('rmFormTitle').textContent='Add employee to roster';
+  document.getElementById('rmSave').textContent='Add to roster';
+  document.getElementById('rmReset').style.display='none';
+}
+document.getElementById('rmSave').onclick=async()=>{
+  const entry={ id:document.getElementById('rmId').value,
+    empId:document.getElementById('rmEmpId').value.trim(),
+    name:document.getElementById('rmName').value.trim() };
+  if(!entry.name){ toast('Name required',true); return; }
+  try{
+    const res=await api(entry.id?'updateRoster':'addRoster',{entry});
+    DATA.roster=res.roster; resetRosterForm(); renderRoster();
+    toast(entry.id?'Roster updated ✓':'Added to roster ✓');
+  }catch(e){ toast(e.message,true); }
+};
 
 /* ---------- Prices ---------- */
 function fillPrices(){
